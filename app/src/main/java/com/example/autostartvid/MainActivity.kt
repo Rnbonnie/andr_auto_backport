@@ -23,6 +23,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -188,7 +191,15 @@ class MainActivity : AppCompatActivity() {
     private fun playVideoInternally() {
         var videoFile: File? = null
 
-        videoFile = getRandomVideoFromDir(Environment.getExternalStorageDirectory().absolutePath + "/autostart")
+        // Try direct root path first (often used on special boxes)
+        val directPath = File("/autostart/auto.mp4")
+        if (directPath.exists()) {
+            videoFile = directPath
+        }
+
+        if (videoFile == null) {
+            videoFile = getRandomVideoFromDir(Environment.getExternalStorageDirectory().absolutePath + "/autostart")
+        }
 
         if (videoFile == null) {
             val moviesFile = File(Environment.getExternalStorageDirectory().absolutePath + "/Movies/auto.mp4")
@@ -261,7 +272,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hideSystemUI() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                     or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -270,6 +288,19 @@ class MainActivity : AppCompatActivity() {
                     or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         }
     }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemUI()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
+    }
+}
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
